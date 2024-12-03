@@ -125,6 +125,20 @@ function updateQuantityAndPrice(productId, cartQuantity) {
   }
 }
 
+function endQuantityEdit(childSpanElement) {
+  // (inner <span> element) childSpanElement'den quantity-enabled seçicisini kaldır.
+  childSpanElement.classList.remove("quantity-enabled");
+
+  // childSpanElement'inden contenteditable attr'sini kaldır.
+  childSpanElement.setAttribute("contenteditable", "false");
+
+  // js-product-quantity altındaki <span> elementine product quantity bilgisini al
+  const cartQuantity = Number(childSpanElement.textContent.trim());
+
+  // Metodun çağrıldığı yere cartQuantity'i tekrar geri dönder
+  return cartQuantity;
+}
+
 document.querySelectorAll(".js-product-quantity").forEach((spanElement) => {
   // js-product-quantity selector'e ait data-product-id bilgisini al
   const { productId } = spanElement.dataset;
@@ -145,14 +159,8 @@ document.querySelectorAll(".js-product-quantity").forEach((spanElement) => {
   // js-product-quantity contenteditable ile içeriği değiştirilebilir durumda iken Enter tuşuna basılıp çekildiğinde yapılacak işlemler
   spanElement.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
-      // js-product-quantity altındaki <span> elementine product quantity bilgisini al
-      const cartQuantity = Number(childSpanElement.textContent.trim());
-
-      // (inner <span> element) childSpanElement'den quantity-enabled seçicisini kaldır.
-      childSpanElement.classList.remove("quantity-enabled");
-
-      // childSpanElement'inden contenteditable attr'sini kaldır.
-      childSpanElement.setAttribute("contenteditable", "false");
+      // child <span> elementini deaktif hale getir
+      const cartQuantity = endQuantityEdit(childSpanElement);
 
       // Ürün fiyatı ve quantity bilgisini güncellemek ve HTML yazdırmak için updateQuantityAndPrice() metodunu çağır.
       updateQuantityAndPrice(productId, cartQuantity);
@@ -166,20 +174,13 @@ document.querySelectorAll(".js-cart-update").forEach((button) => {
     // Basılan butona ait data-product-id bilgisine ulaş
     const { productId } = button.dataset;
 
-    // data-product-id bilgisi productId ile uyuşan <span> elementini bul ve içeriğini cartQuantity değişkenine kopyala
-    const cartQuantity = Number(
-      document.querySelector(`[data-product-id="${productId}"] span`).innerText
-    );
-
+    // childSpanElementini seç
     const childSpanElement = document.querySelector(
       `[data-product-id="${productId}"] span`
     );
 
-    // (inner <span> element) childSpanElement'den quantity-enabled seçicisini kaldır.
-    childSpanElement.classList.remove("quantity-enabled");
-
-    // childSpanElement'inden contenteditable attr'sini kaldır.
-    childSpanElement.setAttribute("contenteditable", "false");
+    // child <span> elementini deaktif hale getir
+    const cartQuantity = endQuantityEdit(childSpanElement);
 
     // Güncelleme yap
     updateQuantityAndPrice(productId, cartQuantity);
