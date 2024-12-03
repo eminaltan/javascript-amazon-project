@@ -1,5 +1,6 @@
 import { products } from "../data/products.js";
 import { formatCurrency } from "./utils/money.js";
+import { cart, getLocalStorage, saveLocalStorage } from "../data/cart.js";
 
 let html = "";
 
@@ -22,9 +23,9 @@ for (const productItems of products) {
             class="product-rating-stars"
             src="images/ratings/rating-${productItems.rating.stars * 10}.png"
         />
-        <div class="product-rating-count link-primary">${
-          productItems.rating.count
-        }</div>
+        <div class="product-rating-count link-primary">
+            ${productItems.rating.count}
+        </div>
         </div>
 
         <div class="product-price">
@@ -32,7 +33,7 @@ for (const productItems of products) {
         </div>
 
         <div class="product-quantity-container">
-        <select>
+        <select class="js-product-select-${productItems.id}">
             <option selected value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
@@ -53,9 +54,62 @@ for (const productItems of products) {
         Added
         </div>
 
-        <button class="add-to-cart-button button-primary">Add to Cart</button>
+        <button 
+            class="add-to-cart-button button-primary js-add-to-cart" 
+            data-product-id="${productItems.id}"
+            >
+            Add to Cart
+        </button>
     </div>
   `;
 }
 
 document.querySelector(".js-product-grid").innerHTML = html;
+
+getLocalStorage();
+
+function addToCart(productId) {
+  // Sepette ürünü ara
+  const matchingProduct = cart.find((cartItem) => cartItem.id === productId);
+
+  // Ürün miktarını al
+  const productQuantity = document.querySelector(
+    `.js-product-select-${productId}`
+  ).value;
+
+  // Eğer ürün sepette varsa miktarını güncelle
+  if (matchingProduct) {
+    // matchingProduct = cart
+    matchingProduct.quantity += Number(productQuantity); // Mevcut miktara ekle
+  } else {
+    // Ürün sepette yoksa yeni bir öğe olarak ekle
+    cart.push({
+      id: productId,
+      quantity: Number(productQuantity),
+    });
+  }
+
+  // Sepeti localStorage'a kaydet
+  saveLocalStorage(cart);
+}
+
+function updateQuantityCart() {
+  // Quantity başlangıç değerini belirle
+  let cartQuantity = 0;
+
+  // cart içerisindeki tüm ürünlerin toplam sayısınının hesaplanması
+  cart.forEach((cartItems) => {
+    cartQuantity += cartItems.quantity;
+  });
+
+  document.querySelector(".js-cart-quantity").innerText = cartQuantity;
+}
+
+document.querySelectorAll(".js-add-to-cart").forEach((button) => {
+  button.addEventListener("click", () => {
+    const { productId } = button.dataset;
+
+    addToCart(productId);
+    updateQuantityCart();
+  });
+});
