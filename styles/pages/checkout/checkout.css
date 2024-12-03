@@ -209,3 +209,9 @@
   margin-top: 11px;
   margin-bottom: 15px;
 }
+
+.quantity-enabled{
+  outline: 2px solid darkorange;
+  padding: 2px;
+    border-radius: 3px;
+}
