@@ -1,6 +1,8 @@
 import { products } from "../data/products.js";
 import { cart, getLocalStorage, saveLocalStorage } from "../data/cart.js";
-import { calculatePrice } from "./utils/money.js";
+import { calculatePrice, formatCurrency } from "./utils/money.js";
+import { deliveryOptions } from "../data/deliveryOptions.js";
+import dayjs from "https://unpkg.com/dayjs@1.11.10/esm/index.js";
 
 getLocalStorage();
 
@@ -14,9 +16,11 @@ const matchingProducts = products
     const matchingItem = cart.find(
       (cartItems) => cartItems.id === productItems.id
     );
+
     return {
       productItems,
       quantity: matchingItem.quantity,
+      deliveryId: matchingItem.deliveryId,
     };
   });
 
@@ -62,40 +66,8 @@ for (const cart of matchingProducts) {
             <div class="delivery-options">
             <div class="delivery-options-title">Choose a delivery option:</div>
 
-            <div class="delivery-option">
-                <input
-                type="radio"
-                class="delivery-option-input"
-                name="delivery-option-2"
-                />
-                <div>
-                <div class="delivery-option-date">Tuesday, June 21</div>
-                <div class="delivery-option-price">FREE Shipping</div>
-                </div>
-            </div>
-            <div class="delivery-option">
-                <input
-                type="radio"
-                checked
-                class="delivery-option-input"
-                name="delivery-option-2"
-                />
-                <div>
-                <div class="delivery-option-date">Wednesday, June 15</div>
-                <div class="delivery-option-price">$4.99 - Shipping</div>
-                </div>
-            </div>
-            <div class="delivery-option">
-                <input
-                type="radio"
-                class="delivery-option-input"
-                name="delivery-option-2"
-                />
-                <div>
-                <div class="delivery-option-date">Monday, June 13</div>
-                <div class="delivery-option-price">$9.99 - Shipping</div>
-                </div>
-            </div>
+            ${deliveryDate(cart)}
+           
             </div>
         </div>
         </div>
@@ -104,8 +76,48 @@ for (const cart of matchingProducts) {
 
 document.querySelector(".js-order-summary").innerHTML = html;
 
+function deliveryDate(cart) {
+  let html = "";
+
+  let dateString, priceString;
+
+  for (const properties of deliveryOptions) {
+    const today = dayjs();
+
+    const { deliveryId, deliverydDay, deliveryPriceCents } = properties;
+
+    priceString =
+      deliveryPriceCents === 0
+        ? "FREE"
+        : `$${formatCurrency(deliveryPriceCents)}`;
+
+    dateString = today.add(deliverydDay, "days").format("dddd, MMMM D");
+
+    const isChecked = deliveryId === cart.deliveryId;
+
+    html += `<div class="delivery-option">
+                  <input
+                    type="radio"
+                    class="delivery-option-input"
+                    name="delivery-option js-delivery-option-${
+                      cart.productItems.id
+                    }"
+                    data-delivery-id="${deliveryId}"
+                    data-product-id="${cart.productItems.id}"
+                    ${isChecked ? "checked" : ""}
+                  />
+                <div>
+                  <div class="delivery-option-date">${dateString}</div>
+                  <div class="delivery-option-price">${priceString} - Shipping</div>
+                </div>
+            </div>`;
+  }
+
+  return html;
+}
+
 function updateQuantityAndPrice(productId, cartQuantity) {
-  // productsPrice değişkeni içerisindeki productId'ye ait ait fiyat bilgisini priceCents değişkenine aktar
+  // productsPrice değişkeni içerisindeki productId'ye ait fiyat bilgisini priceCents değişkenine aktar
   const priceCents = productsPrice[productId];
 
   // Fiyat hesaplamasını gerçekleştir ve elde edilen sonucu result değişkenine aktar
@@ -203,3 +215,21 @@ document.querySelectorAll(".js-cart-delete").forEach((button) => {
     location.reload();
   });
 });
+
+// Seçili radyo butonuna ait olan deliveryId'yi al ve cart.deliveryId içeriğini güncelle
+// "js-delivery-option" ile başlayan tüm input'ları seç
+document
+  .querySelectorAll('input[name^="delivery-option js-delivery-option-"]')
+  .forEach((radioButton) => {
+    const { productId } = radioButton.dataset;
+    const { deliveryId } = radioButton.dataset;
+
+    radioButton.addEventListener("click", () => {
+      cart.find((cartItems) => {
+        if (cartItems.id === productId) {
+          cartItems.deliveryId = deliveryId;
+          saveLocalStorage(cart);
+        }
+      });
+    });
+  });
