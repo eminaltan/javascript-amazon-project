@@ -68,6 +68,9 @@ document.querySelector(".js-product-grid").innerHTML = html;
 
 getLocalStorage();
 
+// Script ilk render edildiğinde cart içerisinde ürünlerin sayısını bul ve js-cart-quantity içerisine aktar
+updateQuantityCart();
+
 function addToCart(productId) {
   // Sepette ürünü ara
   const matchingProduct = cart.find((cartItem) => cartItem.id === productId);

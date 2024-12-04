@@ -52,7 +52,10 @@ for (const cart of matchingProducts) {
                   data-product-id="${cart.productItems.id}"
                   > Update 
                 </span>
-                <span class="delete-quantity-link link-primary"> Delete </span>
+                <span 
+                  class="delete-quantity-link link-primary js-cart-delete"
+                  data-product-id="${cart.productItems.id}"
+                  > Delete </span>
             </div>
             </div>
 
@@ -184,5 +187,19 @@ document.querySelectorAll(".js-cart-update").forEach((button) => {
 
     // Güncelleme yap
     updateQuantityAndPrice(productId, cartQuantity);
+  });
+});
+
+// "Delete" butonuna basıldığında cart içerisinden ürün silme işlemi
+document.querySelectorAll(".js-cart-delete").forEach((button) => {
+  button.addEventListener("click", () => {
+    // "Delete" butonun data-product-id attr'sine ait bilgiyi al.
+    const { productId } = button.dataset;
+
+    // Güncellenen cart.id ile productId'si aynı olmayan ürünlerden oluşan listeyi cart içerisine aktar ve local storage'a sakla
+    saveLocalStorage(cart.filter((cartItem) => cartItem.id !== productId));
+
+    // Sayfa yeniden reload edilerek cart içerisinin tazelenmesini sağla.
+    location.reload();
   });
 });
