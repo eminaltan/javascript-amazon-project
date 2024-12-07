@@ -3,12 +3,11 @@ export function formatCurrency(priceCents) {
 }
 
 export function calculatePrice(
-  priceCents,
-  productQuantity,
+  cart,
   // product price => default tanımlanmıştır fiyat hesaplaması içindir.
   calculationType = "product price"
 ) {
   if (calculationType === "product price") {
-    return formatCurrency(priceCents * productQuantity);
+    return formatCurrency(cart.productItems.priceCents * cart.quantity);
   }
 }

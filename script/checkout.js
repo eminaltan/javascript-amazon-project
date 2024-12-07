@@ -24,11 +24,7 @@ const matchingProducts = products
     };
   });
 
-let productsPrice = {};
-
 for (const cart of matchingProducts) {
-  productsPrice[cart.productItems.id] = cart.productItems.priceCents;
-
   html += `
         <div class="cart-item-container">
         <div class="delivery-date">Delivery date: Wednesday, June 15</div>
@@ -42,7 +38,7 @@ for (const cart of matchingProducts) {
             <div class="cart-item-details">
             <div class="product-name">${cart.productItems.name}</div>
             <div class="product-price js-product-price-${cart.productItems.id}">
-            $${calculatePrice(cart.productItems.priceCents, cart.quantity)}
+            $${calculatePrice(cart)}
             </div>
             <div class="product-quantity">
                 <span 
@@ -117,22 +113,29 @@ function deliveryDate(cart) {
 }
 
 function updateQuantityAndPrice(productId, cartQuantity) {
-  // productsPrice değişkeni içerisindeki productId'ye ait fiyat bilgisini priceCents değişkenine aktar
-  const priceCents = productsPrice[productId];
+  // cart içerisinde productId ile uyumlu ürünü bul ve matchingItem değişkenine kopyala
+  const matchingItem = cart.find((cartItem) => cartItem.id === productId);
 
-  // Fiyat hesaplamasını gerçekleştir ve elde edilen sonucu result değişkenine aktar
-  const result = calculatePrice(priceCents, cartQuantity);
+  let result;
+
+  // Her matchingProducts ürün için cart.id ile productId ile uyuşan ürünleri arar.
+  matchingProducts.forEach((cartItems) => {
+    if (matchingItem) {
+      // Uyuşma olması halinde cart.quantity içeriği formdan gelen qunatity (cartQuantity) bilgisi ile güncellenir.
+      cartItems.quantity = cartQuantity;
+
+      // Fiyat hesaplamasını gerçekleştir ve elde edilen sonucu result değişkenine aktar
+      result = calculatePrice(cartItems); // Hesaplanan değeri al
+    }
+  });
 
   // result değerini js-product-price içine yerleştir
   document.querySelector(
     `.js-product-price-${productId}`
   ).textContent = `$${result}`;
 
-  // cart içerisinde productId ile uyumlu ürünü bul ve matchingItem değişkenine kopyala
-  const matchingItem = cart.find((cartItem) => cartItem.id === productId);
-
   if (matchingItem) {
-    // matchingItem değişkeninde (yani cart) değer varsa quantity bilgisini güncelle
+    // matchingItem değişkeninde (yani cart) quantity değeri varsa quantity bilgisini güncelle
     matchingItem.quantity = cartQuantity;
 
     // Sonucu local storage aktar ve sakla
