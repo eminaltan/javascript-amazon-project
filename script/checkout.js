@@ -112,33 +112,25 @@ function deliveryDate(cart) {
   return html;
 }
 
-function updateQuantityAndPrice(productId, cartQuantity) {
-  // cart içerisinde productId ile uyumlu ürünü bul ve matchingItem değişkenine kopyala
-  const matchingItem = cart.find((cartItem) => cartItem.id === productId);
+function updateQuantityAndPrice(productId, newQuantity) {
+  // matchingProducts içerisinde productId ile eşleşen ürünü bul
+  const product = matchingProducts.find(
+    (cartItem) => cartItem.productItems.id === productId
+  );
 
-  let result;
+  if (product) {
+    // Ürünün quantity ve fiyat bilgilerini güncelle
+    product.quantity = newQuantity;
 
-  // Her matchingProducts ürün için cart.id ile productId ile uyuşan ürünleri arar.
-  matchingProducts.forEach((cartItems) => {
-    if (matchingItem) {
-      // Uyuşma olması halinde cart.quantity içeriği formdan gelen qunatity (cartQuantity) bilgisi ile güncellenir.
-      cartItems.quantity = cartQuantity;
+    // Güncellenen bilgileri DOM ve Local Storage'a aktar
+    document.querySelector(
+      `.js-product-price-${productId}`
+    ).textContent = `$${calculatePrice(product)}`;
 
-      // Fiyat hesaplamasını gerçekleştir ve elde edilen sonucu result değişkenine aktar
-      result = calculatePrice(cartItems); // Hesaplanan değeri al
-    }
-  });
+    // cart içerisinde productId ile eşleşen ürünü bul
+    const matchingItem = cart.find((cartItem) => cartItem.id === productId);
 
-  // result değerini js-product-price içine yerleştir
-  document.querySelector(
-    `.js-product-price-${productId}`
-  ).textContent = `$${result}`;
-
-  if (matchingItem) {
-    // matchingItem değişkeninde (yani cart) quantity değeri varsa quantity bilgisini güncelle
-    matchingItem.quantity = cartQuantity;
-
-    // Sonucu local storage aktar ve sakla
+    matchingItem.quantity = newQuantity;
     saveLocalStorage(cart);
   }
 }
