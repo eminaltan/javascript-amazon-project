@@ -8,6 +8,9 @@ getLocalStorage();
 
 let html = "";
 
+// deliveryId ve deliveryDate değişkenlerini globalleştiriyoruz
+const dateGlobal = new Map();
+
 const matchingProducts = products
   .filter((productItems) =>
     cart.some((cartItems) => cartItems.id === productItems.id)
@@ -21,13 +24,18 @@ const matchingProducts = products
       productItems,
       quantity: matchingItem.quantity,
       deliveryId: matchingItem.deliveryId,
+      deliveryDate: matchingItem.deliveryDate,
     };
   });
 
 for (const cart of matchingProducts) {
   html += `
         <div class="cart-item-container">
-        <div class="delivery-date">Delivery date: Wednesday, June 15</div>
+        <div class="delivery-date js-delivery-date-${cart.productItems.id}">${
+    cart.deliveryDate
+      ? "Delivery date: " + cart.deliveryDate
+      : "Select delivery date "
+  } </div>
 
         <div class="cart-item-details-grid">
             <img
@@ -90,6 +98,11 @@ function deliveryDate(cart) {
     dateString = today.add(deliverydDay, "days").format("dddd, MMMM D");
 
     const isChecked = deliveryId === cart.deliveryId;
+
+    // deliveryId'ye ait tarih bilgisini dateGlobal değişkenine ekle
+    if (!dateGlobal.has(deliveryId)) {
+      dateGlobal.set(deliveryId, dateString);
+    }
 
     html += `<div class="delivery-option">
                   <input
@@ -223,6 +236,18 @@ document
       cart.find((cartItems) => {
         if (cartItems.id === productId) {
           cartItems.deliveryId = deliveryId;
+
+          // `dateGlobal`'a erişim sağla ve deliveryId'ye ait tarih bilgisini al
+          dateGlobal.forEach((dateString, dateGlobalDeliveryId) => {
+            if (cartItems.deliveryId == dateGlobalDeliveryId) {
+              // cart nesnesinin deliveryDate property'sini tarih bilgisine değiştir
+              cartItems.deliveryDate = dateString;
+
+              document.querySelector(
+                `.js-delivery-date-${cartItems.id}`
+              ).innerText = "Delivery date: " + cartItems.deliveryDate;
+            }
+          });
           saveLocalStorage(cart);
         }
       });
