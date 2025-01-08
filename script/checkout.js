@@ -24,18 +24,6 @@ const cartItems = products
     };
   });
 
-function findCartItem(whatInFind, whatFind, unqiueId) {
-  let result;
-
-  if (whatInFind === cart) {
-    result = whatInFind.find((items) => items.id === unqiueId);
-  } else if (whatInFind === cartItems) {
-    result = whatInFind.find((items) => items.productItems.id === unqiueId);
-  }
-
-  return result;
-}
-
 for (const cart of cartItems) {
   html += `
         <div class="cart-item-container">
@@ -87,6 +75,25 @@ for (const cart of cartItems) {
 }
 
 document.querySelector(".js-order-summary").innerHTML = html;
+
+/**
+ * Bir içeriği başka bir içerik içerisinde uniqueId'yi kullanarak bulur.
+ * @param {array} whatInFind - Neyin içerisinde bulmak istediğimizi belirten içerik.
+ * @param {string} whatFind - Neyi bulmak istediğimizi belirtiren içerik.
+ * @param {string} unqiueId - uniqueId'yi kullanarak bulmak istediğimiz içeriğin id'si.
+ * @return {object} bulmak istediğimiz içeriği içeren obje.
+ */
+function findCartItem(whatInFind, whatFind, unqiueId) {
+  let findResult;
+
+  if (whatInFind === cart) {
+    findResult = whatInFind.find((items) => items.id === unqiueId);
+  } else if (whatInFind === cartItems) {
+    findResult = whatInFind.find((items) => items.productItems.id === unqiueId);
+  }
+
+  return findResult;
+}
 
 /**
  * deliveryDate() fonksiyonu, seçili ürün için teslim alma tarihçesi
