@@ -1,6 +1,6 @@
 import { products } from "../data/products.js";
 import { cart, getLocalStorage, saveLocalStorage } from "../data/cart.js";
-import { calculatePrice, formatCurrency } from "./utils/money.js";
+import { formatCurrency } from "./utils/money.js";
 import { deliveryOptions } from "../data/deliveryOptions.js";
 import dayjs from "https://unpkg.com/dayjs@1.11.10/esm/index.js";
 
@@ -8,27 +8,35 @@ getLocalStorage();
 
 let html = "";
 
-// deliveryId ve deliveryDate değişkenlerini globalleştiriyoruz
+// deliveryId ve deliveryDate değişkenlerini globalleştiriyoruz.
 const dateGlobal = new Map();
 
-const matchingProducts = products
-  .filter((productItems) =>
-    cart.some((cartItems) => cartItems.id === productItems.id)
-  )
+const cartItems = products
+  .filter((productItems) => cart.some((items) => items.id === productItems.id))
   .map((productItems) => {
-    const matchingItem = cart.find(
-      (cartItems) => cartItems.id === productItems.id
-    );
+    const matchingCartItem = findCartItem(cart, null, productItems.id);
 
     return {
       productItems,
-      quantity: matchingItem.quantity,
-      deliveryId: matchingItem.deliveryId,
-      deliveryDate: matchingItem.deliveryDate,
+      quantity: matchingCartItem.quantity,
+      deliveryId: matchingCartItem.deliveryId,
+      deliveryDate: matchingCartItem.deliveryDate,
     };
   });
 
-for (const cart of matchingProducts) {
+function findCartItem(whatInFind, whatFind, unqiueId) {
+  let result;
+
+  if (whatInFind === cart) {
+    result = whatInFind.find((items) => items.id === unqiueId);
+  } else if (whatInFind === cartItems) {
+    result = whatInFind.find((items) => items.productItems.id === unqiueId);
+  }
+
+  return result;
+}
+
+for (const cart of cartItems) {
   html += `
         <div class="cart-item-container">
         <div class="delivery-date js-delivery-date-${cart.productItems.id}">${
@@ -46,7 +54,7 @@ for (const cart of matchingProducts) {
             <div class="cart-item-details">
             <div class="product-name">${cart.productItems.name}</div>
             <div class="product-price js-product-price-${cart.productItems.id}">
-            $${calculatePrice(cart)}
+            $${formatCurrency(cart.productItems.priceCents * cart.quantity)}
             </div>
             <div class="product-quantity">
                 <span 
@@ -80,176 +88,197 @@ for (const cart of matchingProducts) {
 
 document.querySelector(".js-order-summary").innerHTML = html;
 
+/**
+ * deliveryDate() fonksiyonu, seçili ürün için teslim alma tarihçesi
+ * seçeneklerini oluşturur ve bunlardan birini seçili olarak gösterir.
+ * @param {object} cart -Sepet içerisinde ürün bilgilerini içeren bir obje.
+ * @return {string} -Olusturulan html kodunu döndürür.
+ */
 function deliveryDate(cart) {
-  let html = "";
+  let deliveryHtml = "";
 
-  let dateString, priceString;
-
-  for (const properties of deliveryOptions) {
+  for (const parameters of deliveryOptions) {
     const today = dayjs();
+    const { deliveryId, deliverydDay, deliveryPriceCents } = parameters;
 
-    const { deliveryId, deliverydDay, deliveryPriceCents } = properties;
-
-    priceString =
+    const formattedPrice =
       deliveryPriceCents === 0
         ? "FREE"
         : `$${formatCurrency(deliveryPriceCents)}`;
 
-    dateString = today.add(deliverydDay, "days").format("dddd, MMMM D");
+    const estimatedDate = today
+      .add(deliverydDay, "days")
+      .format("dddd, MMMM D");
 
-    const isChecked = deliveryId === cart.deliveryId;
+    const isSelected = deliveryId === cart.deliveryId;
 
-    // deliveryId'ye ait tarih bilgisini dateGlobal değişkenine ekle
     if (!dateGlobal.has(deliveryId)) {
-      dateGlobal.set(deliveryId, dateString);
+      dateGlobal.set(deliveryId, estimatedDate);
     }
 
-    html += `<div class="delivery-option">
-                  <input
-                    type="radio"
-                    class="delivery-option-input"
-                    name="delivery-option js-delivery-option-${
-                      cart.productItems.id
-                    }"
-                    data-delivery-id="${deliveryId}"
-                    data-product-id="${cart.productItems.id}"
-                    ${isChecked ? "checked" : ""}
-                  />
-                <div>
-                  <div class="delivery-option-date">${dateString}</div>
-                  <div class="delivery-option-price">${priceString} - Shipping</div>
-                </div>
-            </div>`;
+    deliveryHtml += `
+      <div class="delivery-option">
+        <input
+          type="radio"
+          class="delivery-option-input"
+          name="delivery-option js-delivery-option-${cart.productItems.id}"
+          data-delivery-id="${deliveryId}"
+          data-product-id="${cart.productItems.id}"
+          ${isSelected ? "checked" : ""}
+        />
+        <div>
+          <div class="delivery-option-date">${estimatedDate}</div>
+          <div class="delivery-option-price">${formattedPrice} - Shipping</div>
+        </div>
+      </div>
+    `;
   }
 
-  return html;
+  return deliveryHtml;
 }
 
-function updateQuantityAndPrice(productId, newQuantity) {
-  // matchingProducts içerisinde productId ile eşleşen ürünü bul
-  const product = matchingProducts.find(
-    (cartItem) => cartItem.productItems.id === productId
+/**
+ * Ürün miktarını içeren span elementinin üzerinde mouse ile gezinildiğinde,
+ * ürün miktarını değiştirilebilecek bir alan oluşturulur.
+ * Bu fonksiyon, ürün miktarını değiştirilebilecek alandan çıkıldığında,
+ * ürün miktarını güncellemek için kullanılır.
+ * @param {HTMLElement} quantitySpan - Ürün miktarını içeren span elementini içerir.
+ * @returns {number} - Güncellenen ürün miktarını içerir.
+ */
+function endQuantityEdit(quantitySpan) {
+  quantitySpan.classList.remove("quantity-enabled");
+  quantitySpan.contentEditable = "false";
+
+  const quantity = Number(quantitySpan.textContent.trim());
+
+  return quantity;
+}
+
+//[x] TODO:updateQuantityAndPrice ve updateCartQuantity fonksiyonlarını birleştir. (completed)
+
+/**
+ * Bu metod, ürün miktarını ve fiyatını güncellemek için kullanılır.
+ * @param {Event} event - Ürün miktarını içeren span elementinin üzerinde mouse ile gezinildiğinde oluşan event objesini içerir.
+ * @param {string} cartItemId - Ürün id'sini içerir.
+ * @returns {void}
+ */
+function updateQuantityAndPrice(event, cartItemId) {
+  let selectedProductId;
+
+  // event true ve cartItemId false ise selectedProductId'ye event.target.dataset.productId'yi ata.
+  if (event && !cartItemId) {
+    selectedProductId = event.target.dataset.productId;
+
+    // event false ve cartItemId true ise selectedProductId'ye cartItemId'yi ata.
+  } else if (!event && cartItemId) {
+    selectedProductId = cartItemId;
+  }
+
+  // Ürün miktarını içeren span elementini seç.
+  const quantitySpan = document.querySelector(
+    `[data-product-id="${selectedProductId}"] span`
   );
 
-  if (product) {
-    // Ürünün quantity ve fiyat bilgilerini güncelle
-    product.quantity = newQuantity;
+  // Span elementini deaktif hale getir ve yeni miktarı al.
+  const newCartQuantity = endQuantityEdit(quantitySpan);
 
-    // Güncellenen bilgileri DOM ve Local Storage'a aktar
-    document.querySelector(
-      `.js-product-price-${productId}`
-    ).textContent = `$${calculatePrice(product)}`;
+  const updatedCartItem = findCartItem(cartItems, null, selectedProductId);
 
-    // cart içerisinde productId ile eşleşen ürünü bul
-    const matchingItem = cart.find((cartItem) => cartItem.id === productId);
+  updatedCartItem.quantity = newCartQuantity;
 
-    matchingItem.quantity = newQuantity;
+  document.querySelector(
+    `.js-product-price-${selectedProductId}`
+  ).textContent = `$${formatCurrency(
+    updatedCartItem.productItems.priceCents * newCartQuantity
+  )}`;
+
+  // cart içerisinde cartItemId ile uyuşan ürünü seç ve quantity'ını değiştir.
+  findCartItem(cart, null, selectedProductId).quantity = newCartQuantity;
+
+  saveLocalStorage(cart);
+}
+
+/**
+ * @description Basılan delete butonuna ait event objesini kullanarak,
+ * productId'ye ait ürünü sepette siler ve sepeti günceller.
+ * @param {Event} event - Tıklanılan delete butonuna ait event objesi.
+ * @returns {void}
+ */
+function deleteCartItem(event) {
+  const { productId } = event.target.dataset;
+  const updatedCart = cart.filter((item) => item.id !== productId);
+  saveLocalStorage(updatedCart);
+
+  // [ ] TODO: reload yerine recursive metod kullan. (not completed)
+  location.reload();
+}
+
+/**
+ * @description Delivery radyo butonuna tıklandığında cart'a ait deliveryId
+ * ve deliveryDate bilgilerini güncellemek için updateDeliveryDate() fonksiyonunu
+ * kullanır.
+ * @param {Event} event - Tıklanılan radyo butonuna ait event objesi.
+ * @returns {void}
+ */
+function updateDeliveryDate({ target }) {
+  const { productId, deliveryId } = target.dataset;
+
+  const selectedCartItem = findCartItem(cart, null, productId);
+
+  if (selectedCartItem) {
+    selectedCartItem.deliveryId = deliveryId;
+
+    const dateString = dateGlobal.get(deliveryId);
+
+    if (dateString) {
+      selectedCartItem.deliveryDate = dateString;
+
+      document.querySelector(
+        `.js-delivery-date-${selectedCartItem.id}`
+      ).innerText = `Delivery date: ${selectedCartItem.deliveryDate}`;
+    }
+
     saveLocalStorage(cart);
   }
 }
 
-function endQuantityEdit(childSpanElement) {
-  // (inner <span> element) childSpanElement'den quantity-enabled seçicisini kaldır.
-  childSpanElement.classList.remove("quantity-enabled");
-
-  // childSpanElement'inden contenteditable attr'sini kaldır.
-  childSpanElement.setAttribute("contenteditable", "false");
-
-  // js-product-quantity altındaki <span> elementine product quantity bilgisini al
-  const cartQuantity = Number(childSpanElement.textContent.trim());
-
-  // Metodun çağrıldığı yere cartQuantity'i tekrar geri dönder
-  return cartQuantity;
-}
-
+// Ürün miktarını içeren span elementinin üzerinde mouse ile gezinildiğinde, ürün miktarını değiştirilebilecek bir alan oluşturulur.
 document.querySelectorAll(".js-product-quantity").forEach((spanElement) => {
-  // js-product-quantity selector'e ait data-product-id bilgisini al
-  const { productId } = spanElement.dataset;
-
-  // js-product-quantity seçicisi altındaki <span> elementini seç. (cart quantity bilgisini tutan <span>)
+  const { productId: cartItemId } = spanElement.dataset;
   const childSpanElement = spanElement.querySelector("span");
 
-  // js-product-quantity üzerine mouse geldiğinde
+  // Enter tuşuna basıldığında, ürün miktarını ve fiyatını güncellemek için updateQuantityAndPrice() metodunu çağır.
+  spanElement.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      updateQuantityAndPrice(null, cartItemId);
+    }
+  });
 
+  // Ürün miktarını içeren span elementinin üzerinde mouse ile gezinildiğinde, ürün miktarını değiştirilebilecek bir alan oluşturulur.
   spanElement.addEventListener("mouseover", () => {
-    // childSpanElement'e contenteditable attr'yi true olacak şekilde tanımla
     childSpanElement.setAttribute("contenteditable", "true");
-
-    // childSpanElement'i quantity-enabled seçicisi ile yeni stil özellikleri ver
     childSpanElement.classList.add("quantity-enabled");
   });
 
-  // js-product-quantity contenteditable ile içeriği değiştirilebilir durumda iken Enter tuşuna basılıp çekildiğinde yapılacak işlemler
-  spanElement.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      // child <span> elementini deaktif hale getir
-      const cartQuantity = endQuantityEdit(childSpanElement);
-
-      // Ürün fiyatı ve quantity bilgisini güncellemek ve HTML yazdırmak için updateQuantityAndPrice() metodunu çağır.
-      updateQuantityAndPrice(productId, cartQuantity);
-    }
-  });
+  // Mouse imleci spanElement'in üzerinden ayrıldığında deaktif hale getirilir. (opsiyonel)
+  /*   spanElement.addEventListener("mouseout", () => {
+    endQuantityEdit(childSpanElement);
+  }); */
 });
 
-// Update butonuna basıldığında ürün fiyat bilgisi ve sayısı güncelleme
+// Update buttonuna basıldığında ürün fiyat bilgisi ve miktarını güncellemek için updateCartQuantity() metodunu çagır.
 document.querySelectorAll(".js-cart-update").forEach((button) => {
-  button.addEventListener("click", () => {
-    // Basılan butona ait data-product-id bilgisine ulaş
-    const { productId } = button.dataset;
-
-    // childSpanElementini seç
-    const childSpanElement = document.querySelector(
-      `[data-product-id="${productId}"] span`
-    );
-
-    // child <span> elementini deaktif hale getir
-    const cartQuantity = endQuantityEdit(childSpanElement);
-
-    // Güncelleme yap
-    updateQuantityAndPrice(productId, cartQuantity);
-  });
+  button.addEventListener("click", updateQuantityAndPrice);
 });
 
-// "Delete" butonuna basıldığında cart içerisinden ürün silme işlemi
+// Ürün silme işlemi için deleteCartItem() metodunu çağır.
 document.querySelectorAll(".js-cart-delete").forEach((button) => {
-  button.addEventListener("click", () => {
-    // "Delete" butonun data-product-id attr'sine ait bilgiyi al.
-    const { productId } = button.dataset;
-
-    // Güncellenen cart.id ile productId'si aynı olmayan ürünlerden oluşan listeyi cart içerisine aktar ve local storage'a sakla
-    saveLocalStorage(cart.filter((cartItem) => cartItem.id !== productId));
-
-    // Sayfa yeniden reload edilerek cart içerisinin tazelenmesini sağla.
-    location.reload();
-  });
+  button.addEventListener("click", deleteCartItem);
 });
 
-// Seçili radyo butonuna ait olan deliveryId'yi al ve cart.deliveryId içeriğini güncelle
-// "js-delivery-option" ile başlayan tüm input'ları seç
+// Delivery radyo butonuna tıklandığında cart'a ait deliveryId ve deliveryDate bilgilerini güncellemek için updateDeliveryDate() metodunu çağır.
 document
   .querySelectorAll('input[name^="delivery-option js-delivery-option-"]')
   .forEach((radioButton) => {
-    const { productId } = radioButton.dataset;
-    const { deliveryId } = radioButton.dataset;
-
-    radioButton.addEventListener("click", () => {
-      cart.find((cartItems) => {
-        if (cartItems.id === productId) {
-          cartItems.deliveryId = deliveryId;
-
-          // `dateGlobal`'a erişim sağla ve deliveryId'ye ait tarih bilgisini al
-          dateGlobal.forEach((dateString, dateGlobalDeliveryId) => {
-            if (cartItems.deliveryId == dateGlobalDeliveryId) {
-              // cart nesnesinin deliveryDate property'sini tarih bilgisine değiştir
-              cartItems.deliveryDate = dateString;
-
-              document.querySelector(
-                `.js-delivery-date-${cartItems.id}`
-              ).innerText = "Delivery date: " + cartItems.deliveryDate;
-            }
-          });
-          saveLocalStorage(cart);
-        }
-      });
-    });
+    radioButton.addEventListener("click", updateDeliveryDate);
   });
