@@ -3,6 +3,7 @@ import { cart, getLocalStorage, saveLocalStorage } from "../../data/cart.js";
 import { formatCurrency } from "../utils/money.js";
 import { deliveryOptions } from "../../data/deliveryOptions.js";
 import dayjs from "https://unpkg.com/dayjs@1.11.10/esm/index.js";
+import { renderPayment } from "./renderPayment.js";
 
 /**
  * Sepetteki ürünlerin listesini  ve ürünleri güncellemek için gerekli
@@ -20,7 +21,7 @@ export function renderCheckOut() {
 
   const cartItems = products
     .filter((productItems) =>
-      cart.some((items) => items.id === productItems.id)
+      cart.some((Items) => Items.id === productItems.id)
     )
     .map((productItems) => {
       const matchingCartItem = findCartItem(cart, null, productItems.id);
@@ -212,11 +213,12 @@ export function renderCheckOut() {
     findCartItem(cart, null, selectedProductId).quantity = newCartQuantity;
 
     saveLocalStorage(cart);
+    renderPayment();
   }
 
   /**
    * @description Basılan delete butonuna ait event objesini kullanarak,
-   * productId'ye ait ürünü sepette siler ve sepeti günceller.
+   * productId'ye ait ürünü sepetten siler ve sepeti günceller.
    * @param {Event} event - Tıklanılan delete butonuna ait event objesi.
    * @returns {void}
    */
@@ -227,11 +229,12 @@ export function renderCheckOut() {
     saveLocalStorage(updatedCart);
 
     renderCheckOut();
+    renderPayment();
   }
 
   /**
    * @description Delivery radyo butonuna tıklandığında cart'a ait deliveryId
-   * ve deliveryDate bilgilerini güncellemek için updateDeliveryDate() fonksiyonunu
+   * ve deliveryDate bilgilerini güncellemek için updateDeliveryDate() metodunu
    * kullanır.
    * @param {Event} event - Tıklanılan radyo butonuna ait event objesi.
    * @returns {void}
@@ -255,6 +258,7 @@ export function renderCheckOut() {
       }
 
       saveLocalStorage(cart);
+      renderPayment();
     }
   }
 
