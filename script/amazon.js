@@ -60,6 +60,7 @@ for (const productItems of products) {
             >
             Add to Cart
         </button>
+        <p class="add-to-cart-message js-message-${productItems.id}"></p>
     </div>
   `;
 }
@@ -111,6 +112,12 @@ function updateQuantityCart() {
 document.querySelectorAll(".js-add-to-cart").forEach((button) => {
   button.addEventListener("click", () => {
     const { productId } = button.dataset;
+    const pElement = document.querySelector(`.js-message-${productId}`);
+    pElement.innerText = "Added";
+
+    setTimeout(() => {
+      pElement.innerText = "";
+    }, 2000);
 
     addToCart(productId);
     updateQuantityCart();
